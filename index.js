@@ -35,33 +35,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// 📜 Optional: Add state disclaimer if applicable
-const stateInput = (req.body.state || "").toLowerCase().replace(/\s/g, "");
-const stateMap = {
-  ca: "License and Disclosure required",
-  california: "License and Disclosure required",
-  ct: "Registration and Disclosure required",
-  connecticut: "Registration and Disclosure required",
-  fl: "Comply with Broker Code of Conduct",
-  florida: "Comply with Broker Code of Conduct",
-  ga: "Disclosure required",
-  georgia: "Disclosure required",
-  ks: "Disclosure required",
-  kansas: "Disclosure required",
-  mo: "Registration required",
-  missouri: "Registration required",
-  ny: "Provider will supply broker commission disclosure",
-  newyork: "Provider will supply broker commission disclosure",
-  ut: "Provider will supply broker commission disclosure",
-  utah: "Provider will supply broker commission disclosure",
-  va: "Registration required",
-  virginia: "Registration required",
-};
-const disclaimer = stateMap[stateInput];
-if (disclaimer) {
-  res.setHeader("X-State-Disclaimer", disclaimer);
-}
-
 app.post('/watermark', upload.single('pdf'), async (req, res) => {
   try {
     const { user_email, state } = req.body;
@@ -71,7 +44,7 @@ app.post('/watermark', upload.single('pdf'), async (req, res) => {
       return res.status(400).json({ error: 'Missing user_email or file' });
     }
 
-    // Fetch logo from Supabase
+    // 📥 Fetch logo from Supabase
     const logoFileName = `${user_email}.png`;
     const { data } = supabase
       .storage
@@ -81,7 +54,7 @@ app.post('/watermark', upload.single('pdf'), async (req, res) => {
     const logoRes = await axios.get(data.publicUrl, { responseType: 'arraybuffer' });
     const logoBytes = logoRes.data;
 
-    // Load PDF
+    // 📄 Load PDF
     const pdfDoc = await PDFDocument.load(pdfFile.buffer, { ignoreEncryption: true });
     const logoImage = await pdfDoc.embedPng(logoBytes);
     const pages = pdfDoc.getPages();
@@ -111,12 +84,34 @@ app.post('/watermark', upload.single('pdf'), async (req, res) => {
 
     const finalBytes = await pdfDoc.save();
 
-    // Optional: attach disclaimer header if state is present
-    if (state) {
-      const disclaimerText = STATE_DISCLAIMERS[state.toUpperCase()] || STATE_DISCLAIMERS.DEFAULT;
-      res.setHeader('X-State-Disclaimer', disclaimerText);
+    // 📜 Optional: Add state disclaimer header
+    const stateInput = (state || "").toLowerCase().replace(/\s/g, "");
+    const stateMap = {
+      ca: "License and Disclosure required",
+      california: "License and Disclosure required",
+      ct: "Registration and Disclosure required",
+      connecticut: "Registration and Disclosure required",
+      fl: "Comply with Broker Code of Conduct",
+      florida: "Comply with Broker Code of Conduct",
+      ga: "Disclosure required",
+      georgia: "Disclosure required",
+      ks: "Disclosure required",
+      kansas: "Disclosure required",
+      mo: "Registration required",
+      missouri: "Registration required",
+      ny: "Provider will supply broker commission disclosure",
+      newyork: "Provider will supply broker commission disclosure",
+      ut: "Provider will supply broker commission disclosure",
+      utah: "Provider will supply broker commission disclosure",
+      va: "Registration required",
+      virginia: "Registration required",
+    };
+    const disclaimer = stateMap[stateInput];
+    if (disclaimer) {
+      res.setHeader("X-State-Disclaimer", disclaimer);
     }
 
+    // 📤 Return watermarked PDF
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename=watermarked.pdf');
     res.send(Buffer.from(finalBytes));
