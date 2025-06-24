@@ -38,7 +38,7 @@ app.post('/watermark', upload.single('pdf'), async (req, res) => {
 
     const logoFileName = `${user_email}.png`;
     const { data } = supabase.storage
-      .from('wholesale_logos')
+      .from('wholesale.logos')
       .getPublicUrl(logoFileName);
 
     const logoRes = await axios.get(data.publicUrl, { responseType: 'arraybuffer' });
